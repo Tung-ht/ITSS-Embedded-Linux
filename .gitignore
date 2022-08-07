@@ -5,5 +5,4 @@
 *.ipr
 
 ### build file ###
-CMakeLists.txt
 .cmake-build-debug/
