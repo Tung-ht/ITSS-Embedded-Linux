@@ -1,0 +1,9 @@
+### Clion IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### build file ###
+CMakeLists.txt
+.cmake-build-debug/
