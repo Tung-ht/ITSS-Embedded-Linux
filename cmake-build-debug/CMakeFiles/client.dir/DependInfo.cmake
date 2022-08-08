@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "/mnt/c/Users/DaiPhongPC/OneDrive/Desktop/ITSS-Embedded-Project/client.c" "/mnt/c/Users/DaiPhongPC/OneDrive/Desktop/ITSS-Embedded-Project/cmake-build-debug/CMakeFiles/client.dir/client.c.o"
+  "/mnt/c/Users/DaiPhongPC/OneDrive/Desktop/ITSS-Embedded-Linux/client.c" "/mnt/c/Users/DaiPhongPC/OneDrive/Desktop/ITSS-Embedded-Linux/cmake-build-debug/CMakeFiles/client.dir/client.c.o"
   )
 set(CMAKE_C_COMPILER_ID "GNU")
 

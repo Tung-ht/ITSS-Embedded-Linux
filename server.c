@@ -222,7 +222,7 @@ void powSupplyInfoAccess_handle() {
         tprintf("shmat() failed\n");
         exit(1);
     }
-
+    int sum_temp,i;
     ////////////////
     // check mail //
     ////////////////
@@ -296,6 +296,12 @@ void powSupplyInfoAccess_handle() {
             msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
 
             sleep(1);
+            
+            sum_temp=0;
+            for (i = 0; i < MAX_DEVICE; i++)
+                sum_temp += devices[i].use_power[devices[i].mode];
+            powsys->current_power = sum_temp;
+
             sprintf(temp, "System power using: %dW", powsys->current_power);
             tprintf("%s\n", temp);
             sprintf(new_msg.mtext, "s|%s", temp);
@@ -333,6 +339,11 @@ void powSupplyInfoAccess_handle() {
             sprintf(new_msg.mtext, "s|%s", temp);
             msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
 
+            sum_temp=0;
+            for (i = 0; i < MAX_DEVICE; i++)
+                sum_temp += devices[i].use_power[devices[i].mode];
+            powsys->current_power = sum_temp;
+
             sprintf(temp, "System power using: %dW", powsys->current_power);
             tprintf("%s\n", temp);
             sprintf(new_msg.mtext, "s|%s", temp);
@@ -348,7 +359,7 @@ int find_device_with_max_priority_power() {
     float maxValue = -100000;
     int maxNo = 0;
     for (i = 0; i < MAX_DEVICE; i++) {
-        float power_priority = devices[i].use_power[devices[i].mode] / devices[i].priority;
+        float power_priority = ( (float) devices[i].use_power[devices[i].mode] )/ ((float) devices[i].priority);
         if (power_priority > maxValue) {
             maxValue = power_priority;
             maxNo = i;
@@ -423,21 +434,11 @@ void elePowerCtrl_handle() {
             sprintf(new_msg.mtext, "s|%s", temp);
             msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
 
-            tprintf("Server restarts in 10 seconds\n");
-            int count;
-            count = 10;
-
-            while (count != 0) {
-                printf("Server restarts in \t%d seconds\r", count);
-                fflush(stdout);
-                count--;
-                sleep(1);
-            }
-            tprintf("Server restarts!\n");
+            // tprintf("Server reset in 10 seconds\n");
 
             int no;
-            for (no = 0; no < MAX_DEVICE; no++) {
-                if (devices[no].mode == 1) {
+            for(no = 0; no < MAX_DEVICE; no++) {
+                if(devices[no].mode == 1) {
                     new_msg.mtype = 2;
                     sprintf(new_msg.mtext, "m|%d|2|", devices[no].pid);
                     msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
@@ -447,16 +448,7 @@ void elePowerCtrl_handle() {
             pid_t my_child;
             if ((my_child = fork()) == 0) {
                 // in child
-                sleep(5);
-
-                // Todo: shutdown devices which have more use_power/priority till cur_power < warning_threshold
-
-//                    if (devices[no].mode != 0) {
-//                        new_msg.mtype = 2;
-//                        sprintf(new_msg.mtext, "m|%d|0|", devices[no].pid);
-//                        msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
-//                    }
-
+                sleep(10);
                 while (powsys->current_power >= POWER_THRESHOLD) {
                     int max_id = find_device_with_max_priority_power();
                     powsys->current_power -= devices[max_id].use_power[devices[max_id].mode];
@@ -465,7 +457,7 @@ void elePowerCtrl_handle() {
                     sprintf(new_msg.mtext, "m|%d|0|", devices[max_id].pid);
                     msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
                 }
-                powsys->threshold_over = 0;
+
                 kill(getpid(), SIGKILL);
             } else {
                 //in parent
@@ -477,7 +469,7 @@ void elePowerCtrl_handle() {
 
                     if (powsys->current_power < POWER_THRESHOLD) {
                         powsys->supply_over = 0;
-                        tprintf("OK, power now is %dW\n", powsys->current_power);
+                        tprintf("OK, power now is %d\n", powsys->current_power);
                         kill(my_child, SIGKILL);
                         break;
                     }

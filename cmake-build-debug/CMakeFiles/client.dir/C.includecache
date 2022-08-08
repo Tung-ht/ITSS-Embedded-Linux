@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/mnt/c/Users/DaiPhongPC/OneDrive/Desktop/ITSS-Embedded-Project/client.c
+/mnt/c/Users/DaiPhongPC/OneDrive/Desktop/ITSS-Embedded-Linux/client.c
 stdio.h
 -
 stdlib.h
