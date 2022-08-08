@@ -75,7 +75,7 @@ int tprintf(const char *fmt, ...) {
     struct tm *tstruct;
     time_t tsec = time(NULL);
     tstruct = localtime(&tsec);
-    printf("%4d:  %02d:%02d:%02d| ", getpid(), tstruct->tm_hour, tstruct->tm_min, tstruct->tm_sec);
+    printf("pid %4d:  %02d:%02d:%02d| ", getpid(), tstruct->tm_hour, tstruct->tm_min, tstruct->tm_sec);
     va_start(args, fmt);
     return vprintf(fmt, args);
 }
@@ -342,6 +342,22 @@ void powSupplyInfoAccess_handle() {
     } // endwhile
 } //end function powSupplyInfoAccess_handle
 
+// Todo: find device with max of used_power/priority
+int find_device_with_max_priority_power() {
+    int i;
+    float maxValue = -100000;
+    int maxNo = 0;
+    for (i = 0; i < MAX_DEVICE; i++) {
+        float power_priority = devices[i].use_power[devices[i].mode] / devices[i].priority;
+        if (power_priority > maxValue) {
+            maxValue = power_priority;
+            maxNo = i;
+        }
+    }
+    return maxNo;
+}
+
+
 void elePowerCtrl_handle() {
     //////////////////////////////
     // Connect to shared memory //
@@ -389,7 +405,7 @@ void elePowerCtrl_handle() {
             msg_t new_msg;
             new_msg.mtype = 1;
             char temp[MAX_MESSAGE_LENGTH];
-            sprintf(temp, "WARNING!!! Over threshold, power comsuming: %dW", powsys->current_power);
+            sprintf(temp, "WARNING!!! Over threshold, power comsuming: %dW\n", powsys->current_power);
             tprintf("%s\n", temp);
             sprintf(new_msg.mtext, "s|%s", temp);
             msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
@@ -411,8 +427,7 @@ void elePowerCtrl_handle() {
             int count;
             count = 10;
 
-            while(count != 0)
-            {
+            while (count != 0) {
                 printf("Server restarts in \t%d seconds\r", count);
                 fflush(stdout);
                 count--;
@@ -434,15 +449,23 @@ void elePowerCtrl_handle() {
                 // in child
                 sleep(5);
 
-                int no;
-                for (no = 0; no < MAX_DEVICE; no++) {
-                    // Todo: shutdown devices which have more use_power/priority till cur_power < warning_threshold
-                    if (devices[no].mode != 0) {
-                        new_msg.mtype = 2;
-                        sprintf(new_msg.mtext, "m|%d|0|", devices[no].pid);
-                        msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
-                    }
+                // Todo: shutdown devices which have more use_power/priority till cur_power < warning_threshold
+
+//                    if (devices[no].mode != 0) {
+//                        new_msg.mtype = 2;
+//                        sprintf(new_msg.mtext, "m|%d|0|", devices[no].pid);
+//                        msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
+//                    }
+
+                while (powsys->current_power >= POWER_THRESHOLD) {
+                    int max_id = find_device_with_max_priority_power();
+                    powsys->current_power -= devices[max_id].use_power[devices[max_id].mode];
+                    devices[max_id].mode = 0;
+                    new_msg.mtype = 2;
+                    sprintf(new_msg.mtext, "m|%d|0|", devices[max_id].pid);
+                    msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
                 }
+                powsys->threshold_over = 0;
                 kill(getpid(), SIGKILL);
             } else {
                 //in parent
@@ -454,7 +477,7 @@ void elePowerCtrl_handle() {
 
                     if (powsys->current_power < POWER_THRESHOLD) {
                         powsys->supply_over = 0;
-                        tprintf("OK, power now is %d", powsys->current_power);
+                        tprintf("OK, power now is %dW\n", powsys->current_power);
                         kill(my_child, SIGKILL);
                         break;
                     }
