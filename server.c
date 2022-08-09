@@ -29,6 +29,7 @@
 ////////////////////
 int server_port;
 pid_t connectMng, powerSupply, elePowerCtrl, powSupplyInfoAccess, logWrite;
+// current number of connecting devices
 int powerSupply_count = 0;
 int listen_sock, conn_sock;
 char recv_data[BUFF_SIZE];
@@ -46,7 +47,7 @@ typedef struct {
     int current_power;
     int threshold_over;
     int supply_over;
-    int reset;
+    int reset; //not used
 } powsys_t;
 powsys_t *powsys;
 
@@ -110,7 +111,7 @@ void powerSupply_handle(int conn_sock) {
             // send message to powSupplyInfoAccess
             msg_t new_msg;
             new_msg.mtype = 2;
-            sprintf(new_msg.mtext, "d|%d|", getpid()); // n for DISS
+            sprintf(new_msg.mtext, "d|%d|", getpid()); // d for DISS
             msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
 
             powerSupply_count--;
@@ -296,7 +297,7 @@ void powSupplyInfoAccess_handle() {
             msgsnd(msqid, &new_msg, MAX_MESSAGE_LENGTH, 0);
 
             sleep(1);
-            
+            // update cur_power
             sum_temp=0;
             for (i = 0; i < MAX_DEVICE; i++)
                 sum_temp += devices[i].use_power[devices[i].mode];
@@ -541,6 +542,7 @@ int main(int argc, char const *argv[]) {
     ///////////////////////////////////////////
     // Create shared memory for power system //
     ///////////////////////////////////////////
+    // 0644 is access privilege (RW-R--R--): the owner RW, the group R, others R
     if ((shmid_s = shmget(key_s, sizeof(powsys_t), 0644 | IPC_CREAT)) < 0) {
         tprintf("shmget() failed\n");
         exit(1);
@@ -607,6 +609,7 @@ int main(int argc, char const *argv[]) {
         tprintf("SERVER forked new process elePowerCtrl ---------------- pid: %d.\n", elePowerCtrl);
         tprintf("SERVER forked new process powSupplyInfoAccess --------- pid: %d.\n", powSupplyInfoAccess);
         tprintf("SERVER forked new process logWrite -------------------- pid: %d.\n", logWrite);
+        // wait all below processes end then inform exit to cmd
         waitpid(connectMng, NULL, 0);
         waitpid(elePowerCtrl, NULL, 0);
         waitpid(powSupplyInfoAccess, NULL, 0);

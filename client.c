@@ -88,10 +88,13 @@ int main(int argc, char const *argv[]) {
         }
         if (device_choose == '0') {
             printf("DISCONNECTED\n");
+            // send signal kill all processes related to the program, exit prgm
             kill(0, SIGKILL);
         }
     } while (check = 0);
 
+    // input normal power mode vs saving mode
+    // mode2 = normal, mode3 = saving
     while ((mode_2 <= mode_3) || (mode_2 >= 10000)) {
         printf("Normal power mode: ");
         scanf("%d", &mode_2);
@@ -146,6 +149,7 @@ int main(int argc, char const *argv[]) {
     }
 
     // Then, wait for server response
+    // child process is used to read msg from server
     if (fork() == 0) {
         // Child: listen from server
         while (1) {
